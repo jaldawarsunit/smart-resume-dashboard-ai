@@ -1,0 +1,108 @@
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { FileText, PlusCircle, Upload, BarChart3, TrendingUp } from "lucide-react";
+import { Link } from "react-router-dom";
+
+export default function Dashboard() {
+  const stats = [
+    { title: "Total Resumes", value: "5", icon: FileText, change: "+2" },
+    { title: "ATS Avg Score", value: "78%", icon: BarChart3, change: "+5%" },
+    { title: "Applications", value: "12", icon: TrendingUp, change: "+3" },
+  ];
+
+  const recentResumes = [
+    { id: 1, title: "Frontend Developer Resume", lastModified: "2 hours ago", atsScore: 85 },
+    { id: 2, title: "Full Stack Developer Resume", lastModified: "1 day ago", atsScore: 72 },
+    { id: 3, title: "Data Scientist Resume", lastModified: "3 days ago", atsScore: 89 },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+        <p className="text-gray-600 mt-2">Welcome back! Here's an overview of your resume building activity.</p>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {stats.map((stat) => (
+          <Card key={stat.title} className="hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">
+                {stat.title}
+              </CardTitle>
+              <stat.icon className="h-4 w-4 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
+              <p className="text-xs text-green-600 font-medium">{stat.change} from last month</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Quick Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Quick Actions</CardTitle>
+          <CardDescription>Get started with building your next resume</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Button asChild className="h-20 flex-col gap-2">
+              <Link to="/create">
+                <PlusCircle className="h-6 w-6" />
+                Create New Resume
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="h-20 flex-col gap-2">
+              <Link to="/upload">
+                <Upload className="h-6 w-6" />
+                Upload Existing Resume
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="h-20 flex-col gap-2">
+              <Link to="/ats">
+                <BarChart3 className="h-6 w-6" />
+                Check ATS Score
+              </Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Recent Resumes */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Resumes</CardTitle>
+          <CardDescription>Your recently modified resumes</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {recentResumes.map((resume) => (
+              <div key={resume.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                <div className="flex items-center gap-3">
+                  <FileText className="h-5 w-5 text-primary" />
+                  <div>
+                    <h3 className="font-medium text-gray-900">{resume.title}</h3>
+                    <p className="text-sm text-gray-500">Modified {resume.lastModified}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-gray-900">ATS Score</p>
+                    <p className={`text-sm font-semibold ${resume.atsScore >= 80 ? 'text-green-600' : resume.atsScore >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
+                      {resume.atsScore}%
+                    </p>
+                  </div>
+                  <Button variant="outline" size="sm">Edit</Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
