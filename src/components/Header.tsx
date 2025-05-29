@@ -2,8 +2,11 @@
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { User, LogOut } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function Header() {
+  const { user, logout } = useAuth();
+
   return (
     <header className="h-16 border-b bg-white flex items-center justify-between px-6">
       <div className="flex items-center gap-4">
@@ -14,9 +17,9 @@ export function Header() {
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2 text-sm text-gray-600">
           <User className="h-4 w-4" />
-          <span>John Doe</span>
+          <span>{user?.name || 'User'}</span>
         </div>
-        <Button variant="outline" size="sm" className="gap-2">
+        <Button variant="outline" size="sm" className="gap-2" onClick={logout}>
           <LogOut className="h-4 w-4" />
           Logout
         </Button>
