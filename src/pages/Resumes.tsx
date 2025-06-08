@@ -8,12 +8,15 @@ import { useResumes } from "@/hooks/useResumes";
 import { useToast } from "@/hooks/use-toast";
 import { ResumePreview } from "@/components/ResumePreview";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Resume } from "@/types/resume";
+import { downloadResumeAsPDF, downloadResumeAsDOCX } from "@/utils/downloadUtils";
 
 export default function Resumes() {
   const { resumes, isLoading, deleteResume } = useResumes();
   const { toast } = useToast();
   const [previewResume, setPreviewResume] = useState<Resume | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const handleDelete = (id: string, title: string) => {
     if (window.confirm(`Are you sure you want to delete "${title}"?`)) {
@@ -22,6 +25,51 @@ export default function Resumes() {
         title: "Resume deleted",
         description: "Your resume has been permanently deleted.",
       });
+    }
+  };
+
+  const handleDownload = async (resume: Resume, format: 'pdf' | 'docx') => {
+    setDownloadingId(resume.id);
+    try {
+      const filename = `${resume.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}`;
+      
+      if (format === 'pdf') {
+        // First show the preview to render the content
+        setPreviewResume(resume);
+        // Wait a bit for the content to render
+        setTimeout(async () => {
+          try {
+            await downloadResumeAsPDF('resume-preview-content', filename);
+            toast({
+              title: "PDF Downloaded",
+              description: "Your resume has been downloaded as PDF.",
+            });
+          } catch (error) {
+            toast({
+              title: "Download Failed",
+              description: "Failed to generate PDF. Please try again.",
+              variant: "destructive",
+            });
+          } finally {
+            setDownloadingId(null);
+            setPreviewResume(null);
+          }
+        }, 1000);
+      } else {
+        await downloadResumeAsDOCX(resume, filename);
+        toast({
+          title: "DOCX Downloaded",
+          description: "Your resume has been downloaded as DOCX.",
+        });
+        setDownloadingId(null);
+      }
+    } catch (error) {
+      toast({
+        title: "Download Failed",
+        description: "Failed to download resume. Please try again.",
+        variant: "destructive",
+      });
+      setDownloadingId(null);
     }
   };
 
@@ -139,10 +187,27 @@ export default function Resumes() {
                     <Edit className="h-4 w-4" />
                     Edit
                   </Button>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Download className="h-4 w-4" />
-                    Download
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="gap-2"
+                        disabled={downloadingId === resume.id}
+                      >
+                        <Download className="h-4 w-4" />
+                        {downloadingId === resume.id ? 'Downloading...' : 'Download'}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem onClick={() => handleDownload(resume, 'pdf')}>
+                        Download as PDF
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDownload(resume, 'docx')}>
+                        Download as DOCX
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   <Button
                     variant="outline"
                     size="sm"

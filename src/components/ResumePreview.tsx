@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Resume } from '@/types/resume';
 import { Separator } from "@/components/ui/separator";
@@ -10,7 +9,7 @@ interface ResumePreviewProps {
 
 export function ResumePreview({ resume }: ResumePreviewProps) {
   return (
-    <div className="max-w-4xl mx-auto bg-white shadow-xl border">
+    <div id="resume-preview-content" className="max-w-4xl mx-auto bg-white shadow-xl border">
       <div className="p-12">
         {/* Header Section */}
         <div className="text-center mb-8">
