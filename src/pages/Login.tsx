@@ -59,11 +59,11 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <Card className="w-full max-w-md bg-card border-border">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-primary">Resume Builder AI</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-2xl font-bold text-foreground">Resume Builder AI</CardTitle>
+          <CardDescription className="text-muted-foreground">
             {isLogin ? "Sign in to your account" : "Create a new account"}
           </CardDescription>
         </CardHeader>
@@ -71,7 +71,7 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
               <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
+                <Label htmlFor="name" className="text-foreground">Full Name</Label>
                 <Input
                   id="name"
                   type="text"
@@ -79,12 +79,13 @@ export default function Login() {
                   onChange={(e) => setName(e.target.value)}
                   required={!isLogin}
                   placeholder="Enter your full name"
+                  className="bg-background border-border text-foreground"
                 />
               </div>
             )}
             
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-foreground">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -92,11 +93,12 @@ export default function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 placeholder="Enter your email"
+                className="bg-background border-border text-foreground"
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-foreground">Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -104,6 +106,7 @@ export default function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 placeholder="Enter your password"
+                className="bg-background border-border text-foreground"
               />
             </div>
             
@@ -116,7 +119,7 @@ export default function Login() {
             <Button
               variant="link"
               onClick={() => setIsLogin(!isLogin)}
-              className="text-sm"
+              className="text-sm text-muted-foreground hover:text-foreground"
             >
               {isLogin ? "Need an account? Sign up" : "Already have an account? Sign in"}
             </Button>

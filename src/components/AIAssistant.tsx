@@ -103,67 +103,67 @@ export function AIAssistant() {
 
   return (
     <>
-      {/* Floating Chat Button */}
-      <div className="fixed bottom-6 right-6 z-50">
+      {/* Floating Chat Button - Made smaller */}
+      <div className="fixed bottom-4 right-4 z-50">
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
             <Button
-              size="lg"
-              className="rounded-full h-14 w-14 shadow-lg hover:shadow-xl transition-all duration-200"
+              size="sm"
+              className="rounded-full h-10 w-10 shadow-lg hover:shadow-xl transition-all duration-200"
             >
-              <MessageCircle className="h-6 w-6" />
+              <MessageCircle className="h-4 w-4" />
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md h-[600px] p-0">
-            <DialogHeader className="p-4 pb-2">
-              <DialogTitle className="flex items-center gap-2">
-                <Bot className="h-5 w-5 text-primary" />
+          <DialogContent className="max-w-sm h-[450px] p-0">
+            <DialogHeader className="p-3 pb-2">
+              <DialogTitle className="flex items-center gap-2 text-sm">
+                <Bot className="h-4 w-4 text-primary" />
                 AI Career Assistant
               </DialogTitle>
             </DialogHeader>
             
             <div className="flex flex-col h-full">
-              <ScrollArea className="flex-1 p-4">
-                <div className="space-y-4">
+              <ScrollArea className="flex-1 p-3">
+                <div className="space-y-3">
                   {messages.map((message) => (
                     <div
                       key={message.id}
-                      className={`flex gap-3 ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                      className={`flex gap-2 ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
                     >
                       {message.sender === 'assistant' && (
-                        <div className="flex-shrink-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                          <Bot className="h-4 w-4 text-primary-foreground" />
+                        <div className="flex-shrink-0 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
+                          <Bot className="h-3 w-3 text-primary-foreground" />
                         </div>
                       )}
                       
                       <div
-                        className={`max-w-[80%] p-3 rounded-lg whitespace-pre-line ${
+                        className={`max-w-[80%] p-2 rounded-lg whitespace-pre-line text-xs ${
                           message.sender === 'user'
                             ? 'bg-primary text-primary-foreground'
-                            : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'
+                            : 'bg-muted text-muted-foreground'
                         }`}
                       >
                         {message.text}
                       </div>
                       
                       {message.sender === 'user' && (
-                        <div className="flex-shrink-0 w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center">
-                          <User className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+                        <div className="flex-shrink-0 w-6 h-6 bg-secondary rounded-full flex items-center justify-center">
+                          <User className="h-3 w-3 text-secondary-foreground" />
                         </div>
                       )}
                     </div>
                   ))}
                   
                   {isLoading && (
-                    <div className="flex gap-3 justify-start">
-                      <div className="flex-shrink-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                        <Bot className="h-4 w-4 text-primary-foreground" />
+                    <div className="flex gap-2 justify-start">
+                      <div className="flex-shrink-0 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
+                        <Bot className="h-3 w-3 text-primary-foreground" />
                       </div>
-                      <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg">
+                      <div className="bg-muted p-2 rounded-lg">
                         <div className="flex space-x-1">
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                          <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce"></div>
+                          <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                          <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                         </div>
                       </div>
                     </div>
@@ -172,21 +172,22 @@ export function AIAssistant() {
                 <div ref={messagesEndRef} />
               </ScrollArea>
               
-              <div className="p-4 border-t">
+              <div className="p-3 border-t">
                 <div className="flex gap-2">
                   <Input
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     onKeyPress={handleKeyPress}
-                    placeholder="Ask me anything about resumes, job search..."
+                    placeholder="Ask me about resumes..."
                     disabled={isLoading}
+                    className="text-xs"
                   />
                   <Button
                     onClick={handleSendMessage}
                     disabled={isLoading || !inputText.trim()}
-                    size="icon"
+                    size="sm"
                   >
-                    <Send className="h-4 w-4" />
+                    <Send className="h-3 w-3" />
                   </Button>
                 </div>
               </div>
