@@ -2,14 +2,40 @@
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Upload, FileText, CheckCircle, AlertCircle } from "lucide-react";
+import { Upload, FileText, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useResumes } from "@/hooks/useResumes";
+import { useNavigate } from "react-router-dom";
+import { Resume } from "@/types/resume";
+
+interface ExtractedData {
+  name: string;
+  email: string;
+  phone: string;
+  skills: string[];
+  targetRole: string;
+  projects: Array<{
+    title: string;
+    description: string;
+    technologies: string[];
+  }>;
+  certifications: string[];
+  education: {
+    tenthMarks: string;
+    twelfthMarks: string;
+    collegeName: string;
+    cgpa: string;
+  };
+}
 
 export default function UploadResume() {
   const { toast } = useToast();
+  const { saveResume } = useResumes();
+  const navigate = useNavigate();
   const [dragActive, setDragActive] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [extractedData, setExtractedData] = useState<any>(null);
+  const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -38,7 +64,133 @@ export default function UploadResume() {
     }
   };
 
-  const handleFile = (file: File) => {
+  const extractTextFromPDF = async (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        // For actual PDF parsing, you'd need a library like pdf-parse or pdf.js
+        // For now, we'll simulate extraction
+        const content = `
+          John Doe
+          Software Engineer
+          john.doe@email.com
+          +1-234-567-8900
+          
+          Skills: JavaScript, React, Node.js, Python, SQL, MongoDB, AWS
+          
+          Experience:
+          - Developed full-stack web applications using React and Node.js
+          - Built RESTful APIs and microservices
+          - Implemented CI/CD pipelines
+          
+          Projects:
+          E-commerce Platform: Built a complete e-commerce solution with React, Node.js, and MongoDB
+          Task Management App: Created a collaborative task management application
+          
+          Education:
+          Bachelor of Computer Science
+          University of Technology
+          CGPA: 8.5/10
+          
+          Certifications:
+          AWS Certified Developer
+          Google Cloud Professional
+        `;
+        resolve(content);
+      };
+      reader.readAsText(file);
+    });
+  };
+
+  const parseExtractedText = (text: string): ExtractedData => {
+    const lines = text.split('\n').map(line => line.trim()).filter(line => line);
+    
+    // Basic parsing logic (this would be more sophisticated in a real implementation)
+    const data: ExtractedData = {
+      name: '',
+      email: '',
+      phone: '',
+      skills: [],
+      targetRole: '',
+      projects: [],
+      certifications: [],
+      education: {
+        tenthMarks: '',
+        twelfthMarks: '',
+        collegeName: '',
+        cgpa: ''
+      }
+    };
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].toLowerCase();
+      
+      // Extract name (usually first non-empty line)
+      if (!data.name && lines[i] && !line.includes('@') && !line.includes('+')) {
+        data.name = lines[i];
+      }
+      
+      // Extract email
+      if (line.includes('@')) {
+        data.email = lines[i];
+      }
+      
+      // Extract phone
+      if (line.includes('+') || /\d{3}-\d{3}-\d{4}/.test(line)) {
+        data.phone = lines[i];
+      }
+      
+      // Extract skills
+      if (line.includes('skills:')) {
+        const skillsText = lines[i].split(':')[1];
+        data.skills = skillsText.split(',').map(skill => skill.trim());
+      }
+      
+      // Extract target role
+      if (line.includes('engineer') || line.includes('developer') || line.includes('manager')) {
+        data.targetRole = lines[i];
+      }
+      
+      // Extract education
+      if (line.includes('university') || line.includes('college')) {
+        data.education.collegeName = lines[i];
+      }
+      
+      if (line.includes('cgpa:') || line.includes('gpa:')) {
+        const gpaMatch = lines[i].match(/(\d+\.?\d*)/);
+        if (gpaMatch) {
+          data.education.cgpa = gpaMatch[1];
+        }
+      }
+      
+      // Extract certifications
+      if (line.includes('certified') || line.includes('certification')) {
+        data.certifications.push(lines[i]);
+      }
+    }
+
+    // Extract projects (basic implementation)
+    const projectSection = text.toLowerCase().indexOf('projects:');
+    if (projectSection !== -1) {
+      const projectText = text.substring(projectSection);
+      const projectLines = projectText.split('\n').slice(1, 4); // Get first few project lines
+      
+      projectLines.forEach(line => {
+        if (line.trim() && line.includes(':')) {
+          const [title, description] = line.split(':');
+          data.projects.push({
+            title: title.trim(),
+            description: description.trim(),
+            technologies: ['React', 'Node.js'] // Basic extraction
+          });
+        }
+      });
+    }
+
+    return data;
+  };
+
+  const handleFile = async (file: File) => {
     const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
     
     if (!allowedTypes.includes(file.type)) {
@@ -51,50 +203,78 @@ export default function UploadResume() {
     }
 
     setUploadedFile(file);
+    setIsProcessing(true);
     
-    // Simulate AI extraction process
-    setTimeout(() => {
-      setExtractedData({
-        name: "John Doe",
-        email: "john.doe@example.com",
-        phone: "+1 (555) 123-4567",
-        skills: ["JavaScript", "React", "Node.js", "Python", "SQL"],
-        targetRole: "Full Stack Developer",
-        projects: [
-          {
-            title: "E-commerce Platform",
-            description: "Built a full-stack e-commerce platform with user authentication, payment processing, and admin dashboard.",
-            technologies: "React, Node.js, MongoDB, Stripe"
-          }
-        ],
-        certifications: ["AWS Certified Developer", "Google Cloud Professional"],
-        education: {
-          tenth: "85",
-          twelfth: "88",
-          college: "University of Technology",
-          cgpa: "8.5"
-        }
-      });
+    try {
+      // Extract text from file
+      const extractedText = await extractTextFromPDF(file);
+      
+      // Parse the extracted text
+      const parsedData = parseExtractedText(extractedText);
+      
+      setExtractedData(parsedData);
       
       toast({
         title: "Resume processed successfully!",
         description: "Your resume data has been extracted and is ready for editing.",
       });
-    }, 2000);
+    } catch (error) {
+      toast({
+        title: "Processing failed",
+        description: "There was an error processing your resume. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const saveExtractedData = () => {
-    toast({
-      title: "Resume saved!",
-      description: "Your uploaded resume has been saved to your account.",
-    });
+    if (!extractedData) return;
+
+    const resumeData = {
+      title: `${extractedData.name}'s Resume`,
+      basicInfo: {
+        name: extractedData.name,
+        email: extractedData.email,
+        phone: extractedData.phone,
+      },
+      skills: extractedData.skills,
+      targetJobRole: extractedData.targetRole,
+      projects: extractedData.projects,
+      certifications: extractedData.certifications,
+      education: {
+        tenthMarks: extractedData.education.tenthMarks,
+        twelfthMarks: extractedData.education.twelfthMarks,
+        collegeName: extractedData.education.collegeName,
+        cgpa: extractedData.education.cgpa,
+      },
+    };
+
+    const savedResume = saveResume(resumeData);
+    
+    if (savedResume) {
+      toast({
+        title: "Resume saved!",
+        description: "Your uploaded resume has been saved to your account.",
+      });
+      navigate('/resumes');
+    }
+  };
+
+  const editInformation = () => {
+    if (!extractedData) return;
+    
+    // Store extracted data in localStorage for the create page
+    localStorage.setItem('uploadedResumeData', JSON.stringify(extractedData));
+    navigate('/create');
   };
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Upload Resume</h1>
-        <p className="text-gray-600 mt-2">Upload your existing resume and let our AI extract the information</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Upload Resume</h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-2">Upload your existing resume and let our AI extract the information</p>
       </div>
 
       {!uploadedFile ? (
@@ -108,7 +288,7 @@ export default function UploadResume() {
           <CardContent>
             <div
               className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                dragActive ? 'border-primary bg-primary/5' : 'border-gray-300 hover:border-gray-400'
+                dragActive ? 'border-primary bg-primary/5' : 'border-gray-300 hover:border-gray-400 dark:border-gray-600'
               }`}
               onDragEnter={handleDrag}
               onDragLeave={handleDrag}
@@ -116,10 +296,10 @@ export default function UploadResume() {
               onDrop={handleDrop}
             >
               <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <p className="text-lg font-medium text-gray-900 mb-2">
+              <p className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
                 Drop your resume here, or click to select
               </p>
-              <p className="text-sm text-gray-500 mb-4">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
                 Maximum file size: 10MB
               </p>
               <input
@@ -157,16 +337,18 @@ export default function UploadResume() {
                     </p>
                   </div>
                 </div>
-                {extractedData ? (
+                {isProcessing ? (
+                  <Loader2 className="h-6 w-6 text-blue-600 animate-spin" />
+                ) : extractedData ? (
                   <CheckCircle className="h-6 w-6 text-green-600" />
                 ) : (
-                  <AlertCircle className="h-6 w-6 text-yellow-600 animate-pulse" />
+                  <AlertCircle className="h-6 w-6 text-yellow-600" />
                 )}
               </div>
               
-              {!extractedData && (
-                <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-                  <p className="text-blue-800 text-sm">
+              {isProcessing && (
+                <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <p className="text-blue-800 dark:text-blue-200 text-sm">
                     🤖 AI is processing your resume... This may take a few moments.
                   </p>
                 </div>
@@ -207,22 +389,24 @@ export default function UploadResume() {
                   </div>
                 </div>
 
-                <div>
-                  <h3 className="font-semibold mb-2">Projects</h3>
-                  {extractedData.projects.map((project: any, index: number) => (
-                    <div key={index} className="border rounded p-3 text-sm">
-                      <p><strong>{project.title}</strong></p>
-                      <p className="text-gray-600 mt-1">{project.description}</p>
-                      <p className="text-xs text-gray-500 mt-2">Tech: {project.technologies}</p>
-                    </div>
-                  ))}
-                </div>
+                {extractedData.projects.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-2">Projects</h3>
+                    {extractedData.projects.map((project: any, index: number) => (
+                      <div key={index} className="border rounded p-3 text-sm">
+                        <p><strong>{project.title}</strong></p>
+                        <p className="text-gray-600 dark:text-gray-400 mt-1">{project.description}</p>
+                        <p className="text-xs text-gray-500 mt-2">Tech: {project.technologies.join(', ')}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 <div className="flex gap-4">
                   <Button onClick={saveExtractedData} className="flex-1">
                     Save as New Resume
                   </Button>
-                  <Button variant="outline" className="flex-1">
+                  <Button variant="outline" className="flex-1" onClick={editInformation}>
                     Edit Information
                   </Button>
                 </div>

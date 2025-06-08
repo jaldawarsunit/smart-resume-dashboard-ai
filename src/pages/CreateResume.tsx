@@ -1,417 +1,539 @@
-
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { ResumePreview } from "@/components/ResumePreview";
 import { useToast } from "@/hooks/use-toast";
 import { useResumes } from "@/hooks/useResumes";
 import { useNavigate } from "react-router-dom";
-import { PlusCircle, X, Save } from "lucide-react";
+import { Resume } from "@/types/resume";
+import { Plus, X, Save, Eye } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+interface ResumeData {
+  title: string;
+  basicInfo: {
+    name: string;
+    email: string;
+    phone: string;
+  };
+  skills: string[];
+  targetJobRole: string;
+  projects: {
+    title: string;
+    description: string;
+    technologies: string[];
+  }[];
+  certifications: string[];
+  education: {
+    tenthMarks: string;
+    twelfthMarks: string;
+    collegeName: string;
+    cgpa: string;
+  };
+}
 
 export default function CreateResume() {
-  const [title, setTitle] = useState('');
-  const [basicInfo, setBasicInfo] = useState({
-    name: '',
-    email: '',
-    phone: ''
-  });
-  const [skills, setSkills] = useState<string[]>(['']);
-  const [targetJobRole, setTargetJobRole] = useState('');
-  const [projects, setProjects] = useState([{
-    title: '',
-    description: '',
-    technologies: ['']
-  }]);
-  const [certifications, setCertifications] = useState<string[]>(['']);
-  const [education, setEducation] = useState({
-    tenthMarks: '',
-    twelfthMarks: '',
-    collegeName: '',
-    cgpa: ''
-  });
-
-  const { saveResume } = useResumes();
   const { toast } = useToast();
+  const { saveResume } = useResumes();
   const navigate = useNavigate();
+  
+  const [resumeData, setResumeData] = useState<ResumeData>({
+    title: "",
+    basicInfo: {
+      name: "",
+      email: "",
+      phone: "",
+    },
+    skills: [],
+    targetJobRole: "",
+    projects: [],
+    certifications: [],
+    education: {
+      tenthMarks: "",
+      twelfthMarks: "",
+      collegeName: "",
+      cgpa: "",
+    },
+  });
 
-  const addSkill = () => setSkills([...skills, '']);
-  const removeSkill = (index: number) => setSkills(skills.filter((_, i) => i !== index));
-  const updateSkill = (index: number, value: string) => {
-    const newSkills = [...skills];
-    newSkills[index] = value;
-    setSkills(newSkills);
-  };
+  const [currentSkill, setCurrentSkill] = useState("");
+  const [currentCertification, setCurrentCertification] = useState("");
+  const [newProject, setNewProject] = useState({
+    title: "",
+    description: "",
+    technologies: [] as string[],
+  });
+  const [currentTech, setCurrentTech] = useState("");
 
-  const addProject = () => setProjects([...projects, { title: '', description: '', technologies: [''] }]);
-  const removeProject = (index: number) => setProjects(projects.filter((_, i) => i !== index));
-
-  const addTechnology = (projectIndex: number) => {
-    const newProjects = [...projects];
-    newProjects[projectIndex].technologies.push('');
-    setProjects(newProjects);
-  };
-
-  const removeTechnology = (projectIndex: number, techIndex: number) => {
-    const newProjects = [...projects];
-    newProjects[projectIndex].technologies = newProjects[projectIndex].technologies.filter((_, i) => i !== techIndex);
-    setProjects(newProjects);
-  };
-
-  const updateProject = (index: number, field: string, value: string) => {
-    const newProjects = [...projects];
-    newProjects[index] = { ...newProjects[index], [field]: value };
-    setProjects(newProjects);
-  };
-
-  const updateTechnology = (projectIndex: number, techIndex: number, value: string) => {
-    const newProjects = [...projects];
-    newProjects[projectIndex].technologies[techIndex] = value;
-    setProjects(newProjects);
-  };
-
-  const addCertification = () => setCertifications([...certifications, '']);
-  const removeCertification = (index: number) => setCertifications(certifications.filter((_, i) => i !== index));
-  const updateCertification = (index: number, value: string) => {
-    const newCertifications = [...certifications];
-    newCertifications[index] = value;
-    setCertifications(newCertifications);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!title.trim()) {
-      toast({
-        title: "Title required",
-        description: "Please enter a title for your resume.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!basicInfo.name.trim() || !basicInfo.email.trim()) {
-      toast({
-        title: "Basic information required",
-        description: "Please fill in your name and email address.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const resumeData = {
-      title: title.trim(),
-      basicInfo: {
-        name: basicInfo.name.trim(),
-        email: basicInfo.email.trim(),
-        phone: basicInfo.phone.trim()
-      },
-      skills: skills.filter(skill => skill.trim()),
-      targetJobRole: targetJobRole.trim(),
-      projects: projects.map(project => ({
-        title: project.title.trim(),
-        description: project.description.trim(),
-        technologies: project.technologies.filter(tech => tech.trim())
-      })).filter(project => project.title),
-      certifications: certifications.filter(cert => cert.trim()),
-      education: {
-        tenthMarks: education.tenthMarks.trim(),
-        twelfthMarks: education.twelfthMarks.trim(),
-        collegeName: education.collegeName.trim(),
-        cgpa: education.cgpa.trim()
+  // Load data from upload if available
+  useEffect(() => {
+    const uploadedData = localStorage.getItem('uploadedResumeData');
+    if (uploadedData) {
+      try {
+        const parsed = JSON.parse(uploadedData);
+        setResumeData({
+          title: `${parsed.name}'s Resume`,
+          basicInfo: {
+            name: parsed.name || "",
+            email: parsed.email || "",
+            phone: parsed.phone || "",
+          },
+          skills: parsed.skills || [],
+          targetJobRole: parsed.targetRole || "",
+          projects: parsed.projects || [],
+          certifications: parsed.certifications || [],
+          education: {
+            tenthMarks: parsed.education?.tenthMarks || "",
+            twelfthMarks: parsed.education?.twelfthMarks || "",
+            collegeName: parsed.education?.collegeName || "",
+            cgpa: parsed.education?.cgpa || "",
+          },
+        });
+        localStorage.removeItem('uploadedResumeData');
+        toast({
+          title: "Data loaded!",
+          description: "Your uploaded resume data has been loaded for editing.",
+        });
+      } catch (error) {
+        console.error("Error loading uploaded data:", error);
       }
-    };
+    }
+  }, [toast]);
 
-    const newResume = saveResume(resumeData);
-    
-    if (newResume) {
+  const addSkill = () => {
+    if (currentSkill.trim() && !resumeData.skills.includes(currentSkill.trim())) {
+      setResumeData(prev => ({
+        ...prev,
+        skills: [...prev.skills, currentSkill.trim()]
+      }));
+      setCurrentSkill("");
+    }
+  };
+
+  const removeSkill = (skillToRemove: string) => {
+    setResumeData(prev => ({
+      ...prev,
+      skills: prev.skills.filter(skill => skill !== skillToRemove)
+    }));
+  };
+
+  const addCertification = () => {
+    if (currentCertification.trim() && !resumeData.certifications.includes(currentCertification.trim())) {
+      setResumeData(prev => ({
+        ...prev,
+        certifications: [...prev.certifications, currentCertification.trim()]
+      }));
+      setCurrentCertification("");
+    }
+  };
+
+  const removeCertification = (certToRemove: string) => {
+    setResumeData(prev => ({
+      ...prev,
+      certifications: prev.certifications.filter(cert => cert !== certToRemove)
+    }));
+  };
+
+  const addTechnology = () => {
+    if (currentTech.trim() && !newProject.technologies.includes(currentTech.trim())) {
+      setNewProject(prev => ({
+        ...prev,
+        technologies: [...prev.technologies, currentTech.trim()]
+      }));
+      setCurrentTech("");
+    }
+  };
+
+  const removeTechnology = (techToRemove: string) => {
+    setNewProject(prev => ({
+      ...prev,
+      technologies: prev.technologies.filter(tech => tech !== techToRemove)
+    }));
+  };
+
+  const addProject = () => {
+    if (newProject.title.trim() && newProject.description.trim()) {
+      setResumeData(prev => ({
+        ...prev,
+        projects: [...prev.projects, newProject]
+      }));
+      setNewProject({
+        title: "",
+        description: "",
+        technologies: [],
+      });
+    }
+  };
+
+  const removeProject = (index: number) => {
+    setResumeData(prev => ({
+      ...prev,
+      projects: prev.projects.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleSave = () => {
+    if (!resumeData.title.trim()) {
       toast({
-        title: "Resume created successfully!",
-        description: "Your resume has been saved and is ready to use.",
+        title: "Missing Title",
+        description: "Please provide a title for your resume.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!resumeData.basicInfo.name.trim()) {
+      toast({
+        title: "Missing Name",
+        description: "Please provide your name.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const savedResume = saveResume(resumeData);
+    
+    if (savedResume) {
+      toast({
+        title: "Resume saved!",
+        description: "Your resume has been saved successfully.",
       });
       navigate('/resumes');
     }
   };
 
+  const previewResume: Resume = {
+    id: "preview",
+    userId: "preview",
+    ...resumeData,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
   return (
-    <div className="space-y-8 max-w-4xl mx-auto">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold text-gray-900">Create Professional Resume</h1>
-        <p className="text-lg text-gray-600 mt-3">Build a resume that gets you noticed by employers and ATS systems.</p>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Create Resume</h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-2">Build your professional resume step by step</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-8">
-        {/* Resume Title */}
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-xl">Resume Information</CardTitle>
-            <CardDescription>Give your resume a descriptive title</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <Label htmlFor="title">Resume Title *</Label>
-              <Input
-                id="title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g., Software Developer Resume - 2024"
-                required
-                className="text-lg"
-              />
-            </div>
-          </CardContent>
-        </Card>
+      <Tabs defaultValue="edit" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="edit" className="flex items-center gap-2">
+            <Save className="h-4 w-4" />
+            Edit Resume
+          </TabsTrigger>
+          <TabsTrigger value="preview" className="flex items-center gap-2">
+            <Eye className="h-4 w-4" />
+            Preview
+          </TabsTrigger>
+        </TabsList>
 
-        {/* Basic Information */}
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-xl">Personal Information</CardTitle>
-            <CardDescription>Your contact details and basic information</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name *</Label>
-                <Input
-                  id="name"
-                  value={basicInfo.name}
-                  onChange={(e) => setBasicInfo({...basicInfo, name: e.target.value})}
-                  placeholder="Enter your full name"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email Address *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={basicInfo.email}
-                  onChange={(e) => setBasicInfo({...basicInfo, email: e.target.value})}
-                  placeholder="your.email@example.com"
-                  required
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number</Label>
-              <Input
-                id="phone"
-                value={basicInfo.phone}
-                onChange={(e) => setBasicInfo({...basicInfo, phone: e.target.value})}
-                placeholder="+1 (555) 123-4567"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Target Job Role */}
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-xl">Career Objective</CardTitle>
-            <CardDescription>What position are you targeting?</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <Label htmlFor="targetRole">Target Job Role</Label>
-              <Input
-                id="targetRole"
-                value={targetJobRole}
-                onChange={(e) => setTargetJobRole(e.target.value)}
-                placeholder="e.g., Full Stack Developer, Data Scientist, Product Manager"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Skills */}
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-xl">Professional Skills</CardTitle>
-            <CardDescription>List your technical and professional competencies</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {skills.map((skill, index) => (
-              <div key={index} className="flex gap-3">
-                <Input
-                  value={skill}
-                  onChange={(e) => updateSkill(index, e.target.value)}
-                  placeholder="Enter a skill (e.g., JavaScript, Project Management)"
-                  className="flex-1"
-                />
-                {skills.length > 1 && (
-                  <Button type="button" variant="outline" size="icon" onClick={() => removeSkill(index)}>
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            ))}
-            <Button type="button" variant="outline" onClick={addSkill} className="gap-2">
-              <PlusCircle className="h-4 w-4" />
-              Add Another Skill
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Projects */}
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-xl">Projects & Experience</CardTitle>
-            <CardDescription>Showcase your key projects and achievements</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {projects.map((project, projectIndex) => (
-              <div key={projectIndex} className="p-4 border rounded-lg space-y-4">
-                <div className="flex justify-between items-center">
-                  <h4 className="text-lg font-medium">Project {projectIndex + 1}</h4>
-                  {projects.length > 1 && (
-                    <Button type="button" variant="outline" size="sm" onClick={() => removeProject(projectIndex)}>
-                      <X className="h-4 w-4" />
-                    </Button>
-                  )}
+        <TabsContent value="edit" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Resume Title</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="title">Title *</Label>
+                  <Input
+                    id="title"
+                    value={resumeData.title}
+                    onChange={(e) => setResumeData(prev => ({ ...prev, title: e.target.value }))}
+                    placeholder="e.g., John Doe - Software Engineer Resume"
+                  />
                 </div>
-                
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Basic Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Basic Information</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="name">Full Name *</Label>
+                  <Input
+                    id="name"
+                    value={resumeData.basicInfo.name}
+                    onChange={(e) => setResumeData(prev => ({
+                      ...prev,
+                      basicInfo: { ...prev.basicInfo, name: e.target.value }
+                    }))}
+                    placeholder="John Doe"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="email">Email *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={resumeData.basicInfo.email}
+                    onChange={(e) => setResumeData(prev => ({
+                      ...prev,
+                      basicInfo: { ...prev.basicInfo, email: e.target.value }
+                    }))}
+                    placeholder="john.doe@example.com"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input
+                    id="phone"
+                    value={resumeData.basicInfo.phone}
+                    onChange={(e) => setResumeData(prev => ({
+                      ...prev,
+                      basicInfo: { ...prev.basicInfo, phone: e.target.value }
+                    }))}
+                    placeholder="+1 (555) 123-4567"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="targetRole">Target Job Role</Label>
+                  <Input
+                    id="targetRole"
+                    value={resumeData.targetJobRole}
+                    onChange={(e) => setResumeData(prev => ({ ...prev, targetJobRole: e.target.value }))}
+                    placeholder="Software Engineer"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Skills */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Skills</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex gap-2">
+                  <Input
+                    value={currentSkill}
+                    onChange={(e) => setCurrentSkill(e.target.value)}
+                    placeholder="Enter a skill"
+                    onKeyPress={(e) => e.key === 'Enter' && addSkill()}
+                  />
+                  <Button onClick={addSkill} size="sm">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {resumeData.skills.map((skill, index) => (
+                    <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                      {skill}
+                      <X
+                        className="h-3 w-3 cursor-pointer"
+                        onClick={() => removeSkill(skill)}
+                      />
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Projects */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Projects</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {/* Existing Projects */}
+                {resumeData.projects.map((project, index) => (
+                  <div key={index} className="p-4 border rounded-lg">
+                    <div className="flex justify-between items-start mb-2">
+                      <h4 className="font-semibold">{project.title}</h4>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeProject(index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{project.description}</p>
+                    <div className="flex flex-wrap gap-1">
+                      {project.technologies.map((tech, techIndex) => (
+                        <Badge key={techIndex} variant="outline" className="text-xs">
+                          {tech}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+
+                <Separator />
+
+                {/* Add New Project */}
                 <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor={`project-title-${projectIndex}`}>Project Title</Label>
+                  <h4 className="font-semibold">Add New Project</h4>
+                  <div>
+                    <Label htmlFor="projectTitle">Project Title</Label>
                     <Input
-                      id={`project-title-${projectIndex}`}
-                      value={project.title}
-                      onChange={(e) => updateProject(projectIndex, 'title', e.target.value)}
-                      placeholder="e.g., E-commerce Website, Mobile App"
+                      id="projectTitle"
+                      value={newProject.title}
+                      onChange={(e) => setNewProject(prev => ({ ...prev, title: e.target.value }))}
+                      placeholder="My Awesome Project"
                     />
                   </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor={`project-description-${projectIndex}`}>Description</Label>
+                  <div>
+                    <Label htmlFor="projectDescription">Description</Label>
                     <Textarea
-                      id={`project-description-${projectIndex}`}
-                      value={project.description}
-                      onChange={(e) => updateProject(projectIndex, 'description', e.target.value)}
-                      placeholder="Describe what you built, your role, and the impact..."
+                      id="projectDescription"
+                      value={newProject.description}
+                      onChange={(e) => setNewProject(prev => ({ ...prev, description: e.target.value }))}
+                      placeholder="Describe your project and your role..."
                       rows={3}
                     />
                   </div>
-                  
-                  <div className="space-y-3">
+                  <div>
                     <Label>Technologies Used</Label>
-                    {project.technologies.map((tech, techIndex) => (
-                      <div key={techIndex} className="flex gap-2">
-                        <Input
-                          value={tech}
-                          onChange={(e) => updateTechnology(projectIndex, techIndex, e.target.value)}
-                          placeholder="e.g., React, Node.js, MongoDB"
-                          className="flex-1"
-                        />
-                        {project.technologies.length > 1 && (
-                          <Button type="button" variant="outline" size="icon" onClick={() => removeTechnology(projectIndex, techIndex)}>
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    ))}
-                    <Button type="button" variant="outline" size="sm" onClick={() => addTechnology(projectIndex)} className="gap-2">
-                      <PlusCircle className="h-4 w-4" />
-                      Add Technology
-                    </Button>
+                    <div className="flex gap-2 mt-1">
+                      <Input
+                        value={currentTech}
+                        onChange={(e) => setCurrentTech(e.target.value)}
+                        placeholder="Technology name"
+                        onKeyPress={(e) => e.key === 'Enter' && addTechnology()}
+                      />
+                      <Button onClick={addTechnology} size="sm">
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {newProject.technologies.map((tech, index) => (
+                        <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                          {tech}
+                          <X
+                            className="h-3 w-3 cursor-pointer"
+                            onClick={() => removeTechnology(tech)}
+                          />
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
+                  <Button onClick={addProject}>Add Project</Button>
                 </div>
               </div>
-            ))}
-            <Button type="button" variant="outline" onClick={addProject} className="gap-2">
-              <PlusCircle className="h-4 w-4" />
-              Add Another Project
-            </Button>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        {/* Education */}
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-xl">Educational Background</CardTitle>
-            <CardDescription>Your academic qualifications and achievements</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="collegeName">College/University Name</Label>
-                <Input
-                  id="collegeName"
-                  value={education.collegeName}
-                  onChange={(e) => setEducation({...education, collegeName: e.target.value})}
-                  placeholder="Enter your institution name"
-                />
+          {/* Education */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Education</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="collegeName">College/University</Label>
+                  <Input
+                    id="collegeName"
+                    value={resumeData.education.collegeName}
+                    onChange={(e) => setResumeData(prev => ({
+                      ...prev,
+                      education: { ...prev.education, collegeName: e.target.value }
+                    }))}
+                    placeholder="University of Technology"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="cgpa">CGPA/GPA</Label>
+                  <Input
+                    id="cgpa"
+                    value={resumeData.education.cgpa}
+                    onChange={(e) => setResumeData(prev => ({
+                      ...prev,
+                      education: { ...prev.education, cgpa: e.target.value }
+                    }))}
+                    placeholder="8.5"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="twelfthMarks">12th Grade Marks</Label>
+                  <Input
+                    id="twelfthMarks"
+                    value={resumeData.education.twelfthMarks}
+                    onChange={(e) => setResumeData(prev => ({
+                      ...prev,
+                      education: { ...prev.education, twelfthMarks: e.target.value }
+                    }))}
+                    placeholder="85%"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="tenthMarks">10th Grade Marks</Label>
+                  <Input
+                    id="tenthMarks"
+                    value={resumeData.education.tenthMarks}
+                    onChange={(e) => setResumeData(prev => ({
+                      ...prev,
+                      education: { ...prev.education, tenthMarks: e.target.value }
+                    }))}
+                    placeholder="90%"
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="cgpa">CGPA/Percentage</Label>
-                <Input
-                  id="cgpa"
-                  value={education.cgpa}
-                  onChange={(e) => setEducation({...education, cgpa: e.target.value})}
-                  placeholder="e.g., 8.5 CGPA or 85%"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="twelfthMarks">12th Grade Results</Label>
-                <Input
-                  id="twelfthMarks"
-                  value={education.twelfthMarks}
-                  onChange={(e) => setEducation({...education, twelfthMarks: e.target.value})}
-                  placeholder="e.g., 85% or A Grade"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="tenthMarks">10th Grade Results</Label>
-                <Input
-                  id="tenthMarks"
-                  value={education.tenthMarks}
-                  onChange={(e) => setEducation({...education, tenthMarks: e.target.value})}
-                  placeholder="e.g., 90% or A+ Grade"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        {/* Certifications */}
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-xl">Certifications & Achievements</CardTitle>
-            <CardDescription>Professional certifications and notable achievements</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {certifications.map((cert, index) => (
-              <div key={index} className="flex gap-3">
-                <Input
-                  value={cert}
-                  onChange={(e) => updateCertification(index, e.target.value)}
-                  placeholder="e.g., AWS Certified Developer, Google Analytics Certified"
-                  className="flex-1"
-                />
-                {certifications.length > 1 && (
-                  <Button type="button" variant="outline" size="icon" onClick={() => removeCertification(index)}>
-                    <X className="h-4 w-4" />
+          {/* Certifications */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Certifications</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex gap-2">
+                  <Input
+                    value={currentCertification}
+                    onChange={(e) => setCurrentCertification(e.target.value)}
+                    placeholder="Enter a certification"
+                    onKeyPress={(e) => e.key === 'Enter' && addCertification()}
+                  />
+                  <Button onClick={addCertification} size="sm">
+                    <Plus className="h-4 w-4" />
                   </Button>
-                )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {resumeData.certifications.map((cert, index) => (
+                    <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                      {cert}
+                      <X
+                        className="h-3 w-3 cursor-pointer"
+                        onClick={() => removeCertification(cert)}
+                      />
+                    </Badge>
+                  ))}
+                </div>
               </div>
-            ))}
-            <Button type="button" variant="outline" onClick={addCertification} className="gap-2">
-              <PlusCircle className="h-4 w-4" />
-              Add Certification
-            </Button>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <div className="flex justify-center gap-6 pt-6">
-          <Button type="button" variant="outline" size="lg" onClick={() => navigate('/resumes')}>
-            Cancel
-          </Button>
-          <Button type="submit" size="lg" className="gap-2">
-            <Save className="h-5 w-5" />
-            Create Resume
-          </Button>
-        </div>
-      </form>
+          <div className="flex justify-end">
+            <Button onClick={handleSave} size="lg">
+              <Save className="h-4 w-4 mr-2" />
+              Save Resume
+            </Button>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="preview">
+          <ResumePreview resume={previewResume} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
